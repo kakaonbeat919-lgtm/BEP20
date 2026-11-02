@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>My Rewards</title>
+<meta name="theme-color" content="#0E1116" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0E1116; --card: #171B22; --line: rgba(255,255,255,0.08);
+    --text: #FFFFFF; --dim: rgba(255,255,255,0.55); --accent: #6C6CF0; --green: #2BD49A; --warn: #F5B94A;
+  }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh; min-height: 100dvh; padding: 18px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    display: flex; justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 430px; display: flex; flex-direction: column; gap: 14px; }
+  .head { display: flex; align-items: center; justify-content: space-between; }
+  .head h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+  .chip { font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: rgba(43,212,154,0.14); color: var(--green); }
+  .hero {
+    border-radius: 22px; padding: 22px 20px;
+    background: linear-gradient(135deg, #2A2F7A 0%, #6C6CF0 55%, #2BD49A 130%);
+    box-shadow: 0 10px 30px rgba(108,108,240,0.25);
+  }
+  .hero .label { font-size: 13px; opacity: 0.85; font-weight: 600; }
+  .hero .amt { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-top: 4px; word-break: break-all; }
+  .hero .sub { font-size: 13px; opacity: 0.9; margin-top: 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  input {
+    flex: 1; min-width: 0; background: #0E1116; color: var(--text); border: 1px solid var(--line);
+    border-radius: 14px; padding: 13px 14px; font-size: 14px; outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  button.btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 14px;
+    padding: 13px 16px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; width: 100%;
+  }
+  button.btn.alt { background: #2A2F3A; }
+  button.btn.green { background: var(--green); color: #0E1116; }
+  button.btn:disabled { opacity: 0.5; }
+  .muted { font-size: 12px; color: var(--dim); }
+  .msg { font-size: 13px; color: var(--dim); min-height: 18px; text-align: center; line-height: 1.4; }
+  .msg.err { color: #FF7A7A; }
+  .msg.ok { color: var(--green); }
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rule { background: #0E1116; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .rule .k { font-size: 11px; color: var(--dim); font-weight: 600; }
+  .rule .v { font-size: 15px; font-weight: 800; margin-top: 2px; }
+  .rule .v.warn { color: var(--warn); }
+  .list { display: flex; flex-direction: column; }
+  .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .item .l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .ic { width: 38px; height: 38px; border-radius: 12px; background: rgba(43,212,154,0.14); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .ic.pend { background: rgba(245,185,74,0.14); }
+  .item .t { font-size: 14px; font-weight: 600; }
+  .item .d { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .item .v { font-size: 15px; font-weight: 800; color: var(--green); white-space: nowrap; }
+  .item .v.pend { color: var(--warn); }
+  a.tx { color: var(--accent); font-size: 11px; text-decoration: none; }
+  .empty { text-align: center; padding: 26px 8px; color: var(--dim); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>My Rewards</h1>
+    <span class="chip" id="pctChip">—</span>
+  </div>
+
+  <div class="hero">
+    <div class="label">Claim karne layak reward</div>
+    <div class="amt" id="pending">0.00 USDT</div>
+    <div class="sub" id="sub">Har payment par reward yahan jud jata hai.</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="addr" type="text" placeholder="Wallet address (0x...)" autocomplete="off" spellcheck="false" />
+      <button class="btn" id="go" style="width:auto;">Dekhein</button>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn alt" id="connect">Wallet connect karein</button>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn green" id="claim" disabled>Claim karein</button>
+    </div>
+    <p class="msg" id="msg" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="card" id="rulesCard" hidden>
+    <div class="rules">
+      <div class="rule"><div class="k">Wallet balance</div><div class="v" id="bal">—</div></div>
+      <div class="rule"><div class="k">Claim ke liye minimum</div><div class="v" id="minBal">—</div></div>
+      <div class="rule"><div class="k">Claim kar chuke</div><div class="v" id="claimers">—</div></div>
+      <div class="rule"><div class="k">Baaki slots</div><div class="v" id="slots">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="list" id="list"><div class="empty">Apna wallet address daalein ya wallet connect karein.</div></div>
+  </div>
+  <p class="muted" style="text-align:center;">Reward sirf us wallet ke liye dikhega jiska address aap daalte hain.</p>
+</div>
+
+<script>
+  const BASE = '';
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => (Number(n) || 0).toFixed(2);
+  const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+  const when = (iso) => { try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  const VALID = /^0x[a-fA-F0-9]{40}$/;
+  let current = '';
+  let last = null;
+
+  function setMsg(t, kind) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (kind ? ' ' + kind : ''); }
+
+  const STATUS_TEXT = {
+    nothing: 'Abhi claim karne ke liye koi reward nahi hai. Payment hote hi yahan dikhega.',
+    low_balance: null, // filled with the live minimum
+    limit: 'Pehle wale customers ka claim limit poora ho chuka hai. Ye reward ab band hai.',
+  };
+
+  function render(d) {
+    last = d;
+    $('pending').textContent = fmt(d.pending) + ' USDT';
+    $('pctChip').textContent = d.percent ? d.percent + '% cashback' : 'Cashback band';
+    $('sub').textContent = 'Ab tak claim: ' + fmt(d.claimed) + ' USDT · ' + short(d.address);
+
+    $('rulesCard').hidden = false;
+    $('bal').textContent = d.walletBalance === null ? '—' : fmt(d.walletBalance) + ' USDT';
+    $('bal').className = 'v' + (d.walletBalance !== null && d.walletBalance < d.minBalance ? ' warn' : '');
+    $('minBal').textContent = d.minBalance + ' USDT';
+    $('claimers').textContent = d.claimers + ' / ' + d.limit;
+    $('slots').textContent = String(d.slotsLeft);
+
+    const canClaim = d.claimStatus === 'ok';
+    $('claim').disabled = !canClaim;
+    if (canClaim) {
+      $('claim').textContent = 'Claim karein (' + fmt(d.pending) + ' USDT)';
+      setMsg('Aap claim kar sakte hain. Reward aapke wallet mein bheja jayega.', 'ok');
+    } else {
+      $('claim').textContent = 'Claim karein';
+      if (d.claimStatus === 'low_balance') {
+        setMsg('Claim ke liye wallet mein kam se kam ' + d.minBalance + ' USDT hona chahiye. Abhi ' + fmt(d.walletBalance) + ' USDT hai.', 'err');
+      } else {
+        setMsg(STATUS_TEXT[d.claimStatus] || '', d.claimStatus === 'limit' ? 'err' : '');
+      }
+    }
+
+    const list = $('list');
+    list.innerHTML = '';
+    if (!d.rewards.length) {
+      list.innerHTML = '<div class="empty">Abhi koi reward nahi. Payment hote hi yahan dikhega.</div>';
+      return;
+    }
+    d.rewards.forEach((x) => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      const pend = x.type === 'pending';
+      el.innerHTML = '<div class="l"><div class="ic' + (pend ? ' pend' : '') + '">' + (pend ? '⏳' : '🎁') + '</div><div>' +
+        '<div class="t">' + (pend ? 'Reward (claim baaki)' : 'Claimed cashback') + '</div>' +
+        '<div class="d">' + when(x.at) + '</div>' +
+        (x.txHash ? '<a class="tx" target="_blank" rel="noopener" href="https://bscscan.com/tx/' + x.txHash + '">BscScan par dekhein →</a>' : '') +
+        '</div></div><div class="v' + (pend ? ' pend' : '') + '">' + (pend ? '' : '+') + fmt(x.amount) + '</div>';
+      list.appendChild(el);
+    });
+  }
+
+  async function load(address) {
+    if (!VALID.test(address)) { setMsg('Sahi wallet address daalein (0x se shuru).', 'err'); return; }
+    current = address;
+    setMsg('Load ho raha hai...');
+    $('go').disabled = true;
+    try {
+      const r = await fetch(BASE + '/api/rewards/' + address, { cache: 'no-store' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Load nahi hua');
+      render(d);
+    } catch (err) {
+      setMsg(err.message || 'Kuch galat hua, dobara try karein.', 'err');
+    } finally {
+      $('go').disabled = false;
+    }
+  }
+
+  async function claim() {
+    if (!current) return;
+    $('claim').disabled = true;
+    setMsg('Claim ho raha hai, thoda wait karein...');
+    try {
+      const r = await fetch(BASE + '/api/rewards/' + current + '/claim', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Claim nahi hua');
+      setMsg('✅ ' + fmt(d.amount) + ' USDT aapke wallet mein bhej diya gaya.', 'ok');
+      await load(current);
+      if (d.txHash) {
+        const a = document.createElement('a');
+        a.className = 'tx'; a.target = '_blank'; a.rel = 'noopener';
+        a.href = 'https://bscscan.com/tx/' + d.txHash; a.textContent = 'Transaction dekhein →';
+        $('msg').appendChild(document.createElement('br'));
+        $('msg').appendChild(a);
+      }
+    } catch (err) {
+      setMsg(err.message || 'Claim nahi hua, dobara try karein.', 'err');
+      if (last) $('claim').disabled = last.claimStatus !== 'ok';
+    }
+  }
+
+  $('go').addEventListener('click', () => load($('addr').value.trim()));
+  $('addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') load($('addr').value.trim()); });
+  $('claim').addEventListener('click', claim);
+
+  $('connect').addEventListener('click', async () => {
+    if (typeof window.ethereum === 'undefined') { setMsg('Wallet nahi mila. Apne wallet app ke browser mein kholein.', 'err'); return; }
+    try {
+      const acc = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (acc && acc[0]) { $('addr').value = acc[0]; load(acc[0]); }
+    } catch (err) { setMsg('Connect cancel hua.', 'err'); }
+  });
+
+  // If this wallet already connected before, show its rewards straight away.
+  (async () => {
+    try {
+      if (window.ethereum) {
+        const acc = await window.ethereum.request({ method: 'eth_accounts' });
+        if (acc && acc[0]) { $('addr').value = acc[0]; load(acc[0]); }
+      }
+    } catch (e) {}
+  })();
+</script>
+</body>
+</html>

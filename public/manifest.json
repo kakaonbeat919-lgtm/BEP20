@@ -1,0 +1,16 @@
+{
+  "name": "YourShopName Payments",
+  "short_name": "YourShop",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#17191D",
+  "theme_color": "#17191D",
+  "icons": [
+    {
+      "src": "https://api.qrserver.com/v1/create-qr-code/?size=192x192&data=USDT",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
